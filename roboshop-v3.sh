@@ -61,6 +61,7 @@ EOF
             --instance-type t3.micro \
             --security-groups "roboshop-frontend" \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
+            --iam-instance-profile "Name=Admin-script" \
             --user-data "$USER_DATA_SCRIPT" \
             --query 'Instances[0].InstanceId' \
             
