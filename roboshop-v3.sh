@@ -56,17 +56,15 @@ do
 EOF
 )
 
-            INSTANCE_ID=$( aws ec2 run-instances \
-            --image-id $AMI_ID \
+    INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id "$AMI_ID" \
             --instance-type t3.micro \
             --security-groups "roboshop-frontend" \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
             --iam-instance-profile "Name=Admin-script" \
             --user-data "$USER_DATA_SCRIPT" \
             --query 'Instances[0].InstanceId' \
-            
-            --output text
-            )
+            --output text)
             echo "Launched Instance: $INSTANCE_ID"
             sleep 2 #sometimes instance take some time to create
 
