@@ -50,12 +50,21 @@ do
     if [ $ACTION == "create" ]; then
         if [ $INSTANCE_ID == "None" ]; then
             echo "Launching Instance: roboshop-$instance"
+             USER_DATA_SCRIPT=$(cat <<EOF
+             #!/bin/bash
+             cd /root
+             dnf install git -y
+             git clone https://github.com
+             cd Roboshop-automation-with-shell-script
+             sh "$instance".sh
             INSTANCE_ID=$( aws ec2 run-instances \
             --image-id $AMI_ID \
             --instance-type t3.micro \
-            --security-groups "roboshop-common" "roboshop-$instance" \
+            --security-groups "roboshop-frontend" \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
+            --user-data "$USER_DATA_SCRIPT" \
             --query 'Instances[0].InstanceId' \
+            
             --output text
             )
             echo "Launched Instance: $INSTANCE_ID"
