@@ -46,15 +46,26 @@ get_instance_id(){
 
 for instance in $INSTANCES
 do
-    INSTANCE_ID=$(get_instance_id $instance)
-    if [ $ACTION == "create" ]; then
-        if [ $INSTANCE_ID == "None" ]; then
-            echo "Launching Instance: roboshop-$instance"
-             USER_DATA_SCRIPT=$(cat <<EOF
-             #!/bin/bash
-             sh "$instance".sh
+        INSTANCE_ID=$(get_instance_id $instance)
+        if [ $ACTION == "create" ]; then
+            if [ $INSTANCE_ID == "None" ]; then
+                echo "Launching Instance: roboshop-$instance"
+                USER_DATA_SCRIPT=$(cat <<EOF
+#!/bin/bash
+# 1. Force all outputs/errors to log to a file we can read
+exec > >(tee /var/log/user-data.log|logger -t user-data -s2>/dev/null) 2>&1
+echo "Starting bootstrap for roboshop-$instance"
+cd /root
+# 2. Install Git and clone the codebase cleanly
+dnf install git -y
+rm -rf shell-roboshop
+git clone https://github.com/kumarkoppala/shell-roboshop.git
+cd shell-roboshop
+# 3. Execute the specific component script
+sh "$instance".sh
 EOF
-)
+)   
+
 
     INSTANCE_ID=$(aws ec2 run-instances \
             --image-id "$AMI_ID" \
