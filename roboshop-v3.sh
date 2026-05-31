@@ -59,13 +59,11 @@ do
 exec > >(tee /var/log/user-data.log|logger -t user-data -s2>/dev/null) 2>&1
 echo "Starting bootstrap for roboshop-$instance"
 cd /root
-# 2. Install Git and clone the codebase cleanly
-dnf install git -y
 rm -rf shell-roboshop
 git clone -q https://github.com/kumarkoppala/shell-roboshop.git
 cd shell-roboshop
 # 3. Execute the specific component script
-sh "$instance".sh
+sh $instance.sh
 EOF
 )   
 
@@ -75,7 +73,7 @@ EOF
                 --instance-type t3.micro \
                 --security-groups "roboshop-frontend" \
                 --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
-                --iam-instance-profile "Arn=arn:aws:iam::$(aws sts get-caller-identity --query 'Account' --output text):instance-profile/Admin-script" \
+                --iam-instance-profile "Arn=arn:aws:iam::770399597340:instance-profile/Admin-script" \
                 --user-data "$USER_DATA_SCRIPT" \
                 --query 'Instances[0].InstanceId' \
                 --output text)
