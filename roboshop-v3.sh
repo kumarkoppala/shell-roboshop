@@ -52,22 +52,26 @@ do
         if [ "$INSTANCE_ID" == "None" ] || [ -z "$INSTANCE_ID" ]; then
             echo "Launching Instance: roboshop-$instance"
             
-            # Left-aligned unquoted heredoc block allows local parsing of $instance
+            # Left-aligned unquoted heredoc block allows local parsing of $instance variables cleanly
             USER_DATA_SCRIPT=$(cat <<EOF
 #!/bin/bash
-# 1. Force all outputs/errors to log to a file we can read
+# Force all outputs/errors to log to a local file for troubleshooting
 exec > >(tee /var/log/user-data.log|logger -t user-data -s2>/dev/null) 2>&1
 echo "Starting bootstrap for roboshop-$instance"
+
 cd /root
 rm -rf shell-roboshop
+
+# Clones the codebase quietly (-q) without hanging on terminal prompts
 git clone -q https://github.com/kumarkoppala/shell-roboshop.git
 cd shell-roboshop
-# 3. Execute the specific component script
-sh $instance.sh
+
+# Triggers the component execution layer directly
+sh "$instance".sh
 EOF
 )   
 
-            # Correctly structured multiline AWS execution block with exact instance array filtering
+            # Correctly structured multiline AWS execution block with explicit profile ARN lookup parameters
             INSTANCE_ID=$(aws ec2 run-instances \
                 --image-id "$AMI_ID" \
                 --instance-type t3.micro \
@@ -79,7 +83,7 @@ EOF
                 --output text)
 
             echo "Launched Instance: $INSTANCE_ID"
-            sleep 2 # sometimes instance take some time to create
+            sleep 2 # Allow time for AWS registration engines to initialize resources
 
         else
             echo "roboshop-$instance already running: $INSTANCE_ID"
