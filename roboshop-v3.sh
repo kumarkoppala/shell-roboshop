@@ -57,15 +57,11 @@ cat > /tmp/roboshop-userdata.sh <<EOF
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/null) 2>&1
 echo "Starting bootstrap for roboshop-$instance"
 
-# Ensure git is present
-if ! command -v git &>/dev/null; then
-  yum install -y git || apt-get update && apt-get install -y git
-fi
-
 cd /root
 rm -rf shell-roboshop
 git clone -q https://github.com/kumarkoppala/shell-roboshop.git
 cd shell-roboshop
+
 sh "$instance".sh
 EOF
 
