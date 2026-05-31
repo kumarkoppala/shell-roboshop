@@ -51,12 +51,9 @@ do
         if [ $INSTANCE_ID == "None" ]; then
             echo "Launching Instance: roboshop-$instance"
              USER_DATA_SCRIPT=$(cat <<EOF
-             #!/bin/bash
-             cd /root
-             dnf install git -y
-             git clone https://github.com
-             cd Roboshop-automation-with-shell-script
+             #!/bin/bash           
              sh "$instance".sh
+             EOF
             INSTANCE_ID=$( aws ec2 run-instances \
             --image-id $AMI_ID \
             --instance-type t3.micro \
