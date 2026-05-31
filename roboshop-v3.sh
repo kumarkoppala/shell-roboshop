@@ -61,6 +61,8 @@ cd /root
 rm -rf shell-roboshop
 git clone -q https://github.com/kumarkoppala/shell-roboshop.git
 cd shell-roboshop
+dnf install awscli -y &
+sleep 20
 
 sh "$instance".sh
 EOF
