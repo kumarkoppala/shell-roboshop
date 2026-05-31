@@ -46,11 +46,14 @@ get_instance_id(){
 
 for instance in $INSTANCES
 do
-        INSTANCE_ID=$(get_instance_id $instance)
-        if [ $ACTION == "create" ]; then
-            if [ $INSTANCE_ID == "None" ]; then
-                echo "Launching Instance: roboshop-$instance"
-                USER_DATA_SCRIPT=$(cat <<EOF
+    INSTANCE_ID=$(get_instance_id "$instance")
+    
+    if [ "$ACTION" == "create" ]; then
+        if [ "$INSTANCE_ID" == "None" ] || [ -z "$INSTANCE_ID" ]; then
+            echo "Launching Instance: roboshop-$instance"
+            
+            # Left-aligned unquoted heredoc block allows local parsing of $instance
+            USER_DATA_SCRIPT=$(cat <<EOF
 #!/bin/bash
 # 1. Force all outputs/errors to log to a file we can read
 exec > >(tee /var/log/user-data.log|logger -t user-data -s2>/dev/null) 2>&1
@@ -59,74 +62,73 @@ cd /root
 # 2. Install Git and clone the codebase cleanly
 dnf install git -y
 rm -rf shell-roboshop
-git clone https://github.com/kumarkoppala/shell-roboshop.git
+git clone -q https://github.com/kumarkoppala/shell-roboshop.git
 cd shell-roboshop
 # 3. Execute the specific component script
 sh "$instance".sh
 EOF
 )   
 
-
-    INSTANCE_ID=$(aws ec2 run-instances \
-            --image-id "$AMI_ID" \
-            --instance-type t3.micro \
-            --security-groups "roboshop-frontend" \
-            --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
-            --iam-instance-profile "Arn=arn:aws:iam::$(aws sts get-caller-identity --query 'Account' --output text):instance-profile/Admin-script" \
-            --user-data "$USER_DATA_SCRIPT" \
-            --query 'Instances[0].InstanceId' \
-            --output text)
+            # Correctly structured multiline AWS execution block with exact instance array filtering
+            INSTANCE_ID=$(aws ec2 run-instances \
+                --image-id "$AMI_ID" \
+                --instance-type t3.micro \
+                --security-groups "roboshop-frontend" \
+                --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
+                --iam-instance-profile "Arn=arn:aws:iam::$(aws sts get-caller-identity --query 'Account' --output text):instance-profile/Admin-script" \
+                --user-data "$USER_DATA_SCRIPT" \
+                --query 'Instances[0].InstanceId' \
+                --output text)
 
             echo "Launched Instance: $INSTANCE_ID"
-            sleep 2 #sometimes instance take some time to create
+            sleep 2 # sometimes instance take some time to create
 
         else
             echo "roboshop-$instance already running: $INSTANCE_ID"
         fi
 
         # update R53 record
-        if [ $instance == "frontend" ]; then
-            IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text
-            )
+        if [ "$instance" == "frontend" ]; then
+            IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
+                --query 'Reservations[*].Instances[*].PublicIpAddress' \
+                --output text)
             R53_RECORD="$DOMAIN_NAME"
         else
-            IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID \
-            --query 'Reservations[*].Instances[*].PrivateIpAddress' \
-            --output text
-            )
+            IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
+                --query 'Reservations[*].Instances[*].PrivateIpAddress' \
+                --output text)
             R53_RECORD="$instance.$DOMAIN_NAME"
         fi
 
         aws route53 change-resource-record-sets \
-        --hosted-zone-id $ZONE_ID \
-        --change-batch '
+            --hosted-zone-id "$ZONE_ID" \
+            --change-batch "
             {
-                "Comment": "Update A record to new IP",
-                "Changes": [
+                \"Comment\": \"Update A record to new IP\",
+                \"Changes\": [
                     {
-                        "Action": "UPSERT",
-                        "ResourceRecordSet": {
-                            "Name": "'$R53_RECORD'",
-                            "Type": "A",
-                            "TTL": 1,
-                            "ResourceRecords": [
+                        \"Action\": \"UPSERT\",
+                        \"ResourceRecordSet\": {
+                            \"Name\": \"$R53_RECORD\",
+                            \"Type\": \"A\",
+                            \"TTL\": 1,
+                            \"ResourceRecords\": [
                                 {
-                                    "Value": "'$IP'"
+                                    \"Value\": \"$IP\"
                                 }
                             ]
                         }
                     }
                 ]
-            }
-        '
+            }"
         echo "updated R53 record for: $instance"
+        
     else
-        if [ $INSTANCE_ID == "None" ]; then
+        # Deletion logic segment
+        if [ "$INSTANCE_ID" == "None" ] || [ -z "$INSTANCE_ID" ]; then
             echo "$instance already destroyed, nothing to do..."
         else
-            aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+            aws ec2 terminate-instances --instance-ids "$INSTANCE_ID"
             echo "Terminating Instance: $instance"
         fi
     fi
