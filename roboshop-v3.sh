@@ -61,10 +61,11 @@ EOF
             --instance-type t3.micro \
             --security-groups "roboshop-frontend" \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=roboshop-$instance}]" \
-            --iam-instance-profile "Name=Admin-script" \
+            --iam-instance-profile "Arn=arn:aws:iam::$(aws sts get-caller-identity --query 'Account' --output text):instance-profile/Admin-script" \
             --user-data "$USER_DATA_SCRIPT" \
             --query 'Instances[0].InstanceId' \
             --output text)
+
             echo "Launched Instance: $INSTANCE_ID"
             sleep 2 #sometimes instance take some time to create
 
